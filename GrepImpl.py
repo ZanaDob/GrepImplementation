@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 import re
 
 class GrepImpl:
@@ -6,11 +7,28 @@ class GrepImpl:
     Grep method implementation
     """
 
-    def regular_expressions(self):
+    def __init__(self) -> None:
+        self.__parser = self.configure_parser()
+        self.__arguments = self.__parser.parse_args()
+
+
+    def regular_expressions(self, path: Path, pattern: str):
         """
         To grep with regular expressions
         """
-        print("regularExpressions")
+
+        print("Start regularExpressions implementation: " + f'{pattern} {path}')
+
+        if path.is_dir():
+            print(f'{path}' + ": Is a directory")
+            return
+
+        with open(path, encoding="utf-8") as file:
+            for line in file:
+                # print(line)
+                matches = re.findall(pattern, line)
+                if matches:
+                    print(f'{matches}')
 
     def configure_parser(self):
         """
@@ -18,27 +36,43 @@ class GrepImpl:
         """
         parser = argparse.ArgumentParser(description='Grep command line')
 
+        #parser.add_argument('pattern', type=str, required=True, help='the pattern to find')
         parser.add_argument('pattern', type=str, help='the pattern to find')
-        parser.add_argument('file', metavar='FILES', nargs='*', default=['-'],
-                            help='the files to search')
+        parser.add_argument('path', type=Path, help='the pattern to find')
+        #parser.add_argument('file', metavar='FILE', nargs='*', default=['-'],
+        #                    help='the files to search')
         parser.add_argument('-E', '--extended-regexp', action='store_true',
                         help='expressions matches')
+        parser.add_argument('-i', '--ignore-case', action='store_true',
+                        help='')
+        parser.add_argument('-c', '--count', action='store_true',
+                        help='')
+        parser.add_argument('-n', '--line-number', action='store_true',
+                        help='')
+        parser.add_argument('-r', '--recursive', action='store_true',
+                        help='')
+
+        # -A NUM, --after-context=NUM
+        # -B NUM, --before-context=NUM
+        # -C NUM, -NUM, --context=NUM
+        # -exclude=GLOB
+        # --include=GLOB
 
         return parser
-
 
     def execute(self):
         """
         Main execution method
         """
-        parser = self.configure_parser()
-        arguments = parser.parse_args()
 
-        pattern = arguments.pattern
-        print(pattern)
+        pattern = self.__arguments.pattern
+        print(f'{pattern}')
 
-        file_list = arguments.file
-        print(len(file_list))
+        path = self.__arguments.path
+        print(path)
+
+        if self.__arguments.extended_regexp:
+            self.regular_expressions(path, pattern)
 
 def main():
     """
