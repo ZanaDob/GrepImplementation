@@ -25,10 +25,9 @@ class GrepImpl:
 
         with open(path, encoding="utf-8") as file:
             for line in file:
-                # print(line)
-                matches = re.findall(pattern, line)
-                if matches:
-                    print(f'{matches}')
+                match = re.search(pattern, line)
+                if match:
+                    print(f'{match.group()}: {line}')
 
     def configure_parser(self):
         """
