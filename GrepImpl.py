@@ -39,10 +39,12 @@ class GrepImpl:
                         help='print line number')
         parser.add_argument('-r', '--recursive', action='store_true',
                         help='recursive finding')
-
-        # -A NUM, --after-context=NUM
-        # -B NUM, --before-context=NUM
-        # -C NUM, -NUM, --context=NUM
+        parser.add_argument('-A', '--after-context', action='store', type=int, nargs=1,
+                        help='count line after finding')
+        parser.add_argument('-B', '--before-context', action='store', type=int, nargs=1,
+                        help='count line before finding')
+        parser.add_argument('-C', '--context', action='store', type=int, nargs=2,
+                        help='count line before and after finding')
         # -exclude=GLOB
         # --include=GLOB
 
@@ -95,6 +97,10 @@ class GrepImpl:
 
         path = self.__arguments.path
         print(path)
+
+        # print(self.__arguments.after_context)
+        # print(self.__arguments.before_context)
+        # print(self.__arguments.context)
 
         if not path.exists():
             raise MyExceptionError('No any path in command line')
