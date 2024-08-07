@@ -5,6 +5,7 @@ Usage: grep [OPTION]... PATTERN [FILE]...
 from pathlib import Path
 import argparse
 import re
+import collections
 
 class MyExceptionError(Exception):
     """
@@ -75,12 +76,22 @@ class GrepImpl:
         """
         count = 0
 
+        if self.__arguments.before_context:
+            before = collections.deque(maxlen=2)
+
         lines = file.open(encoding="utf-8").readlines()
         for idx, line in enumerate(lines):
+
             match = self.search_pattern_in_line(pattern, line)
             if match:
+                if self.__arguments.before_context:
+                    print(f'{before}')
+
                 count +=1
                 self.print_result(line, idx)
+            else:
+                if self.__arguments.before_context:
+                    before.append(line)
 
         if self.__arguments.count:
             print(f'Number of lines found in file: {count}')
