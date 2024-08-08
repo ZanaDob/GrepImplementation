@@ -62,10 +62,8 @@ class GrepImpl:
         """
         if self.__arguments.line_number:
             self.__lines_queue.put(f'{file_name} : {idx} : {line}')
-            #print(f'{file_name} : {idx} : {line}')
         else:
             self.__lines_queue.put(f'{file_name} : {line}')
-            # print(f'{file_name} : {line}')
 
     def queue_range(self, file_name:str, lines:list, rbegin:int, rend:int):
         """
@@ -80,7 +78,6 @@ class GrepImpl:
         """
         if self.__arguments.count:
             self.__lines_queue.put(f'Number of lines found in {file_name}: {count}')
-            #print(f'Number of lines found in {file_name}: {count}')
 
     def search_pattern_in_line(self, pattern:str, line:str)->bool:
         """
@@ -148,7 +145,7 @@ class GrepImpl:
 
         self.queue_count(file.name, count)
 
-        time.sleep(1)
+        time.sleep(0.1)
 
     def is_file_included(self, file:Path)->bool:
         """
