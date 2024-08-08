@@ -22,7 +22,7 @@ class GrepImpl:
 
     def configure_parser(self):
         """
-        Parser configuration
+        Parser configuration. Return parser.
         """
         parser = argparse.ArgumentParser(description='Grep command line')
 
@@ -43,24 +43,48 @@ class GrepImpl:
                         help='count line after finding')
         parser.add_argument('-B', '--before-context', action='store', type=int, nargs=1,
                         help='count line before finding')
-        parser.add_argument('-C', '--context', action='store', type=int, nargs=2,
+        parser.add_argument('-C', '--context', action='store', type=int, nargs=1,
                         help='count line before and after finding')
-        # -exclude=GLOB
-        # --include=GLOB
+        parser.add_argument('--exclude', '--exclude', action='store', type=Path, nargs='?',
+                        help='exclude file type')
+        parser.add_argument('--include', '--include', action='store', type=str, nargs='?',
+                        help='include file type')
 
         return parser
 
+    def print_line(self, file_name:str, line:str, idx: int):
+        """
+        Process '-n' and print one line
+        """
+        if self.__arguments.line_number:
+            print(f'{file_name} : {idx} : {line}')
+        else:
+            print(f'{file_name} : {line}')
+
+    def print_range(self, file_name:str, lines:list, rbegin:int, rend:int):
+        """
+        Print lines range
+        """
+        for i in range(rbegin, rend):
+            self.print_line(file_name, lines[i], i)
+
+    def print_count(self, file_name:str, count:int):
+        """
+        Process '-c' and print lines count
+        """
+        if self.__arguments.count:
+            print(f'Number of lines found in {file_name}: {count}')
+
     def search_pattern_in_line(self, pattern:str, line:str)->bool:
         """
-        Search pattern in line. Process '-i', '-E'
-        return true if line found
+        Process '-i', '-E' and search pattern in the line. Return True if line was found
         """
         # Process ignore case '-i'
         if self.__arguments.ignore_case:
             pattern = pattern.lower()
             line = line.lower()
 
-        # Find pattern in line by expression '-E' or by line
+        # Find pattern in line by expression '-E' or by line. Return True if pattern in the line
         if self.__arguments.extended_regexp:
             match = re.search(pattern, line)
             if match:
@@ -71,18 +95,9 @@ class GrepImpl:
 
         return False
 
-    def print_result(self, line:str, idx: int):
-        """
-        Print result. Process '-n'
-        """
-        if self.__arguments.line_number:
-            print(f'{idx}: {line}')
-        else:
-            print(f'{line}')
-
     def process_file(self, file:Path, pattern:str)->int:
         """
-        Process one file. Process '-c' for one file, '-A', '-B', '-C'
+        Process one file. Process '-A', '-B', '-C'. Return count of processed lines
         """
         count = 0
         before_count = 0
@@ -97,12 +112,13 @@ class GrepImpl:
 
         if self.__arguments.context:
             before_count = self.__arguments.context[0]
-            after_count = self.__arguments.context[1]
+            after_count = self.__arguments.context[0]
 
         # Process file and print results
         try:
             lines = file.open(encoding="utf-8").readlines()
         except UnicodeError:
+            self.print_count(file.name, 0)
             return count
 
         processed = False
@@ -111,52 +127,74 @@ class GrepImpl:
             if self.search_pattern_in_line(pattern, line):
 
                 if before_count > 0 and not processed:
-                    print(*lines[max(0, idx - before_count) : idx], sep='/n')
+                    print('------')
+                    self.print_range(file.name, lines, max(0, idx - before_count), idx)
 
-                self.print_result(line, idx)
+                self.print_line(file.name, line, idx)
                 count +=1
                 processed = True
             else:
                 if after_count > 0 and processed:
-                    print(*lines[idx : min(idx + after_count, len(lines))], sep='/n')
-
+                    self.print_range(file.name, lines, idx, min(idx + after_count, len(lines)))
+                    print('------')
                 processed = False
 
-        if self.__arguments.count and count > 0:
-            print(f'Number of lines found in file: {count}')
+        self.print_count(file.name, count)
 
         return count
 
+    def is_file_included(self, file:Path)->bool:
+        """
+        Process '--exclude' command. Return True if file sall be processed
+        """
+        if self.__arguments.exclude:
+            return not file.match(str(self.__arguments.exclude))
+        else:
+            return True
+
+
+    def get_mask(self)->str:
+        """
+        Process '--include' command. Return mask
+        """
+        if self.__arguments.include:
+            return self.__arguments.include
+        else:
+            return '*'
+
     def execute(self):
         """
-        Main execution method. Process '-r', '-c'
+        Main execution method. Process '-r'
         """
 
         pattern:str = self.__arguments.pattern
-        print(f'{pattern}')
+        print(f'pattern: {pattern}')
 
         path:Path = self.__arguments.path
-        print(path)
+        print(f'path: {path}')
 
         if not path.exists():
             raise MyExceptionError('No any path in command line')
 
         lines_count = 0
 
-        # Start serch. Process '-r'
-        if self.__arguments.recursive:
-            for file in path.glob('*'):
-                if not file.is_dir():
-                    lines_count += self.process_file(file, pattern)
-        else:
-            if not path.is_dir():
+        if path.is_file():
+            # process only one file
+            if self.is_file_included(path):
                 lines_count += self.process_file(path, pattern)
+            else:
+                print('No file to process')
+        else:
+            # Process dirrectory
+            if self.__arguments.recursive:
+                # Process '-r'
+                for file in path.rglob(self.get_mask()):
+                    if file.is_file() and self.is_file_included(file):
+                        lines_count += self.process_file(file, pattern)
             else:
                 raise MyExceptionError(f'{path}' + ': Is a directory')
 
-        # Print count. Process '-c'
-        if self.__arguments.count:
-            print(f'Total number of lines found: {lines_count}')
+        self.print_count('total', lines_count)
 
 def main():
     """
@@ -164,7 +202,6 @@ def main():
     """
     my_grep = GrepImpl()
     my_grep.execute()
-
 
 if __name__ == "__main__":
     main()
