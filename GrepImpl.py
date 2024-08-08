@@ -5,7 +5,6 @@ Usage: grep [OPTION]... PATTERN [FILE]...
 from pathlib import Path
 import argparse
 import re
-import collections
 
 class MyExceptionError(Exception):
     """
@@ -51,75 +50,102 @@ class GrepImpl:
 
         return parser
 
-    def search_pattern_in_line(self, pattern:str, line:str):
+    def search_pattern_in_line(self, pattern:str, line:str)->bool:
         """
-        search pattern in line
+        Search pattern in line. Process '-i', '-E'
+        return true if line found
         """
+        # Process ignore case '-i'
         if self.__arguments.ignore_case:
             pattern = pattern.lower()
             line = line.lower()
 
-        return re.search(pattern, line)
+        # Find pattern in line by expression '-E' or by line
+        if self.__arguments.extended_regexp:
+            match = re.search(pattern, line)
+            if match:
+                return True
+        else:
+            if pattern in line:
+                return True
+
+        return False
 
     def print_result(self, line:str, idx: int):
         """
-        print result
+        Print result. Process '-n'
         """
         if self.__arguments.line_number:
             print(f'{idx}: {line}')
         else:
             print(f'{line}')
 
-    def process_file(self, file:Path, pattern:str):
+    def process_file(self, file:Path, pattern:str)->int:
         """
-        process one file
+        Process one file. Process '-c' for one file, '-A', '-B', '-C'
         """
         count = 0
+        before_count = 0
+        after_count = 0
 
+        # Process '-A', '-B', '-C'
         if self.__arguments.before_context:
-            before = collections.deque(maxlen=2)
+            before_count = self.__arguments.before_context[0]
 
-        lines = file.open(encoding="utf-8").readlines()
+        if self.__arguments.after_context:
+            after_count = self.__arguments.after_context[0]
+
+        if self.__arguments.context:
+            before_count = self.__arguments.context[0]
+            after_count = self.__arguments.context[1]
+
+        # Process file and print results
+        try:
+            lines = file.open(encoding="utf-8").readlines()
+        except UnicodeError:
+            return count
+
+        processed = False
+
         for idx, line in enumerate(lines):
+            if self.search_pattern_in_line(pattern, line):
 
-            match = self.search_pattern_in_line(pattern, line)
-            if match:
-                if self.__arguments.before_context:
-                    print(f'{before}')
+                if before_count > 0 and not processed:
+                    print(*lines[max(0, idx - before_count) : idx], sep='/n')
 
-                count +=1
                 self.print_result(line, idx)
+                count +=1
+                processed = True
             else:
-                if self.__arguments.before_context:
-                    before.append(line)
+                if after_count > 0 and processed:
+                    print(*lines[idx : min(idx + after_count, len(lines))], sep='/n')
 
-        if self.__arguments.count:
+                processed = False
+
+        if self.__arguments.count and count > 0:
             print(f'Number of lines found in file: {count}')
 
         return count
 
     def execute(self):
         """
-        Main execution method
+        Main execution method. Process '-r', '-c'
         """
 
-        pattern = self.__arguments.pattern
+        pattern:str = self.__arguments.pattern
         print(f'{pattern}')
 
-        path = self.__arguments.path
+        path:Path = self.__arguments.path
         print(path)
-
-        # print(self.__arguments.after_context)
-        # print(self.__arguments.before_context)
-        # print(self.__arguments.context)
 
         if not path.exists():
             raise MyExceptionError('No any path in command line')
 
         lines_count = 0
 
+        # Start serch. Process '-r'
         if self.__arguments.recursive:
-            for file in path.glob('*.txt'):
+            for file in path.glob('*'):
                 if not file.is_dir():
                     lines_count += self.process_file(file, pattern)
         else:
@@ -128,6 +154,7 @@ class GrepImpl:
             else:
                 raise MyExceptionError(f'{path}' + ': Is a directory')
 
+        # Print count. Process '-c'
         if self.__arguments.count:
             print(f'Total number of lines found: {lines_count}')
 
