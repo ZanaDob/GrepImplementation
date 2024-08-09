@@ -55,7 +55,7 @@ class GrepImpl:
         parser.add_argument('-A', '--after-context', type=int, help='count line after finding')
         parser.add_argument('-B', '--before-context', type=int, help='count line before finding')
         parser.add_argument('-C', '--context', type=int, help='count line before and after finding')
-        parser.add_argument('--exclude', type=Path, help='exclude file type')
+        parser.add_argument('--exclude', type=str, help='exclude file type')
         parser.add_argument('--include', type=str, help='include file type')
 
         return parser
@@ -158,7 +158,7 @@ class GrepImpl:
         Process '--exclude' command. Return True if file sall be processed
         """
         if self.__arguments.exclude:
-            return not file.match(str(self.__arguments.exclude))
+            return not file.match(self.__arguments.exclude)
 
         return True
 
@@ -169,8 +169,8 @@ class GrepImpl:
         """
         if self.__arguments.include:
             return self.__arguments.include
-        else:
-            return '*'
+
+        return '*'
 
     def execute(self):
         """
@@ -207,6 +207,10 @@ class GrepImpl:
 
             num_thread = 4
             files_per_thread = len(files) // num_thread
+            if files_per_thread == 0:
+                num_thread = 1
+                files_per_thread = len(files)
+
             for n in range(files_per_thread):
                 files_count = min((n + 1) * files_per_thread, len(files))
                 thr_files = files[n * files_per_thread: files_count]
