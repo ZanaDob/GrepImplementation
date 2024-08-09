@@ -122,7 +122,7 @@ class GrepImpl:
         try:
             lines = file.open(encoding="utf-8").readlines()
         except UnicodeError:
-            self.queue_count(file.name, 0)
+            self.queue_count(file, 0)
             return
 
         processed = False
@@ -132,20 +132,20 @@ class GrepImpl:
 
                 if before_count > 0 and not processed:
                     self.__lines_queue.put('------')
-                    self.queue_range(file.name, lines, max(0, idx - before_count), idx)
+                    self.queue_range(file, lines, max(0, idx - before_count), idx)
 
-                self.queue_line(file.name, line, idx)
+                self.queue_line(file, line, idx)
                 count +=1
                 processed = True
             else:
                 if after_count > 0 and processed:
-                    self.queue_range(file.name, lines, idx, min(idx + after_count, len(lines)))
+                    self.queue_range(file, lines, idx, min(idx + after_count, len(lines)))
                     self.__lines_queue.put('------')
                 processed = False
 
-        self.queue_count(file.name, count)
+        self.queue_count(file, count)
 
-        time.sleep(0.1)
+        time.sleep(0.01)
 
     def is_file_included(self, file:Path)->bool:
         """
