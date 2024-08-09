@@ -43,11 +43,11 @@ class GrepImpl:
                         help='print line number')
         parser.add_argument('-r', '--recursive', action='store_true',
                         help='recursive finding')
-        parser.add_argument('-A', '--after-context', action='store', type=int, nargs=1,
+        parser.add_argument('-A', '--after-context', type=int,
                         help='count line after finding')
-        parser.add_argument('-B', '--before-context', action='store', type=int, nargs=1,
+        parser.add_argument('-B', '--before-context', type=int,
                         help='count line before finding')
-        parser.add_argument('-C', '--context', action='store', type=int, nargs=1,
+        parser.add_argument('-C', '--context', type=int,
                         help='count line before and after finding')
         parser.add_argument('--exclude', '--exclude', action='store', type=Path, nargs='?',
                         help='exclude file type')
